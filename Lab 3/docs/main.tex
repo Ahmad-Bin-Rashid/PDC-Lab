@@ -1,0 +1,229 @@
+\documentclass[12pt]{article}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+
+\geometry{margin=1in}
+
+\title{Distributed and Parallel Computing \\ Lab 3 Report \\ MPI Collective Operations}
+\author{Ahmad Bin Rashid}
+\date{}
+
+\lstset{
+language=C,
+basicstyle=\ttfamily\small,
+keywordstyle=\color{blue},
+commentstyle=\color{gray},
+stringstyle=\color{red},
+numbers=left,
+numberstyle=\tiny,
+frame=single,
+breaklines=true
+}
+
+\begin{document}
+
+\begin{titlepage}
+
+\title{
+    \vspace{0.5cm}
+    \textbf{\Large Lab 3 Report} \\
+    \vspace{0.5cm}
+    \large MPI Collective Operations \\
+    \vspace{1.5cm}
+}
+
+\author
+{\Large \textbf{Name:} Ahmad Bin Rashid \\ [0.5cm]\\
+\Large \textbf{Roll No:} 2023-CS-53 \\ [0.5cm]\\
+\Large \textbf{Instructor:} Sir Waqas Ali \\ [0.5cm]\\
+\Large \textbf{Course:} Distributed and Parallel Computing \\ [0.5cm]\\ 
+\Large \textbf{University of Engineering and Technology} \\ [0.5cm]\\ }
+
+\begin{figure}
+    \centering
+    \vspace{1cm}
+    \includegraphics[width=0.3\textwidth]{uet-lahore-seeklogo.png}
+\end{figure}
+
+\date{\today}
+
+\end{titlepage}
+
+% --- Title Page ---
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\section{Exercise Execution Screenshots}
+
+\subsection{Exercise 1: MPI Broadcast}
+
+\begin{figure}[H]
+\centering
+\fbox{\includegraphics[width=0.9\textwidth]{Screenshot 2026-03-12 115439.png}}
+\caption{Successful execution of the MPI Broadcast example}
+\end{figure}
+
+\subsection{Exercise 2: MPI Reduce}
+
+\begin{figure}[H]
+\centering
+\fbox{\includegraphics[width=0.9\textwidth]{Screenshot 2026-03-12 115449.png}}
+\caption{Execution output for MPI Reduce example}
+\end{figure}
+
+\subsection{Exercise 3: MPI Scatter and Gather}
+
+\begin{figure}[H]
+\centering
+\fbox{\includegraphics[width=0.9\textwidth]{Screenshot 2026-03-12 115458.png}}
+\caption{Execution output for Scatter and Gather example}
+\end{figure}
+
+\subsection{Exercise 4: MPI Scatterv and Gatherv}
+
+\begin{figure}[H]
+\centering
+\fbox{\includegraphics[width=0.9\textwidth]{Screenshot 2026-03-12 115515.png}}
+\caption{Execution output demonstrating uneven distribution using Scatterv/Gatherv}
+\end{figure}
+
+\subsection{Exercise 5: Matrix Vector Multiplication}
+
+\begin{figure}[H]
+\centering
+\fbox{\includegraphics[width=0.9\textwidth]{Screenshot 2026-03-12 115525.png}}
+\caption{Matrix-vector multiplication result using MPI}
+\end{figure}
+
+
+\section{Code Listing for Exercise 4 Modifications}
+
+The following code modifications were made to correctly implement
+\texttt{MPI\_Scatterv} and \texttt{MPI\_Gatherv} for uneven data distribution.
+
+\begin{lstlisting}
+// Key modifications for Scatterv/Gatherv implementation
+
+// Fix broken declarations
+int *sendcounts;
+int *displs;
+
+// Compute sendcounts and displacements for all processes
+for (int i = 0; i < size; i++) {
+    sendcounts[i] = N / size;
+    if (i < N % size)
+        sendcounts[i]++;
+
+    displs[i] = sum;
+    sum += sendcounts[i];
+}
+
+// Scatter uneven chunks
+MPI_Scatterv(data, sendcounts, displs, MPI_INT,
+             local_data, local_n, MPI_INT,
+             0, MPI_COMM_WORLD);
+
+// Gather results
+MPI_Gatherv(local_data, local_n, MPI_INT,
+            gathered_data, sendcounts, displs,
+            MPI_INT, 0, MPI_COMM_WORLD);
+\end{lstlisting}
+
+\textbf{Explanation of Fixes and Additions:}
+
+\begin{itemize}
+\item Fixed broken variable declarations caused by comment formatting errors.
+\item Corrected the loop responsible for calculating \texttt{sendcounts} and \texttt{displs}.
+\item Ensured that all processes compute their own \texttt{local\_n} to avoid an extra \texttt{MPI\_Scatter}.
+\item Added \texttt{MPI\_Gatherv} to collect uneven chunks back to the root process.
+\item Implemented verification to confirm gathered data matches the original dataset.
+\end{itemize}
+
+
+\section{Performance Comparison for MPI Reduce}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccc}
+\toprule
+Processes & Execution Time (seconds) & Result \\
+\midrule
+1 & 0.000005 & 500500 \\
+2 & 0.000011 & 500500 \\
+4 & 0.000029 & 500500 \\
+8 & 0.000046 & 500500 \\
+\bottomrule
+\end{tabular}
+\caption{Execution time comparison for MPI Reduce example}
+\end{table}
+
+
+\section{Discussion: Collective vs Point-to-Point Communication}
+
+Collective operations in MPI provide a higher-level abstraction for common
+communication patterns such as broadcasting, reduction, and data distribution.
+Unlike point-to-point communication, where the programmer must explicitly
+manage message exchanges between processes, collective operations allow
+multiple processes to participate in a coordinated communication step.
+
+These operations are usually optimized internally by the MPI implementation,
+resulting in better scalability and performance. They also simplify program
+development by reducing the complexity of synchronization and message
+management. In contrast, point-to-point communication offers more flexibility
+but requires careful coordination to avoid issues such as deadlocks and
+inefficient communication patterns.
+
+\section{Self-Assessment Answers}
+
+\textbf{1. What is the main difference between point-to-point and collective communication?} \\
+Point-to-point communication involves explicit message exchange between two specific processes using functions like \texttt{MPI\_Send} and \texttt{MPI\_Recv}. Collective communication involves a group of processes participating in a coordinated operation such as \texttt{MPI\_Bcast} or \texttt{MPI\_Reduce}.
+
+\vspace{0.3cm}
+
+\textbf{2. Why must all processes call a collective operation like MPI\_Bcast?} \\
+All processes in the communicator must call the collective function because MPI synchronizes them internally. If some processes skip the call, the program may hang or produce undefined behavior.
+
+\vspace{0.3cm}
+
+\textbf{3. In the matrix-vector multiplication example, why do we broadcast \texttt{x} instead of scattering it?} \\
+The vector \texttt{x} is needed entirely by every process to compute its portion of the result vector. Broadcasting ensures all processes receive the full vector.
+
+\vspace{0.3cm}
+
+\textbf{4. Write the MPI\_Reduce call that computes the maximum value across all processes.} \\
+\begin{lstlisting}
+MPI_Reduce(&local_value, &max_value, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+\end{lstlisting}
+
+\vspace{0.3cm}
+
+\textbf{5. Which collective would you use to collect processed results back to process 0?} \\
+\texttt{MPI\_Gather} would be used to collect the processed data from all processes and store it in a receive buffer on process 0.
+
+\vspace{0.3cm}
+
+\textbf{6. What happens if the root in MPI\_Gather provides a receive buffer that is too small?} \\
+The program may cause memory corruption, incorrect results, or a runtime error because incoming data exceeds the allocated buffer.
+
+\vspace{0.3cm}
+
+\textbf{7. In the scatterv example, explain the purpose of \texttt{sendcounts} and \texttt{displs}.} \\
+\texttt{sendcounts} specifies how many elements each process receives, while \texttt{displs} specifies the starting position of each chunk in the original array.
+
+\vspace{0.3cm}
+
+\textbf{8. Why is MPI\_Reduce usually faster than manual MPI\_Send/MPI\_Recv implementations?} \\
+MPI collective operations use optimized algorithms (such as tree-based reductions) that minimize communication steps, making them more efficient than manual implementations.
+
+\vspace{0.3cm}
+
+\textbf{9. How would you modify the matrix-vector multiplication to use MPI\_Allgather?} \\
+Each process would compute its partial result and use \texttt{MPI\_Allgather} instead of \texttt{MPI\_Gather} so that every process receives the complete result vector \texttt{y}.
+
+\end{document}
